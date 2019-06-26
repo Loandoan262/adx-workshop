@@ -1,0 +1,111 @@
+// Basics
+
+
+// 7.8 Bollion records 
+signal_raw
+| count 
+
+signal_raw
+| where signal_ts > ago(20d)
+| count
+
+job
+| summarize count() by serno
+| order by count_
+
+signal_raw
+| project job_name, signal_name 
+| take 10
+
+// dual usage of text an Json 
+signal_raw
+| where signal_ts > ago(20d) 
+| where job_name has 'can'
+| distinct signal_name 
+
+
+// summerize 
+// (More) advanced operators
+signal_raw
+| summarize count() by signal_name 
+
+// render 
+signal_raw
+| where serno == "3703033"
+| where signal_ts  between (datetime(2019-05-03) .. datetime(2019-05-10))
+| where signal_name == "MILE_KM"
+| render timechart 
+
+// bin 
+signal_raw
+| where serno == "3703033"
+| where signal_ts  between (datetime(2019-05-03) .. datetime(2019-05-10))
+| where signal_name == "MILE_KM"
+| summarize avg(int_val) by bin(signal_ts, 1d)
+| render timechart
+
+signal_raw
+| summarize signalCount=count() by signal_name
+| render piechart 
+
+// dynamics columns 
+job
+| take 10
+
+// dual usage of text an Json
+job
+| where occurTime > ago(20d) 
+| where ['stream'] hassuffix "Engine"
+| project progDate=tostring(job.event), ['stream']
+| where isnotempty( progDate)
+| summarize count() by progDate, ['stream']
+
+//at which speed do cars fail with with status?
+job
+| project speed = todouble(job.speed), stateOfCar = tostring(job.state)
+| summarize percentiles(speed, 1,50, 99) by stateOfCar
+
+//difference between systeminput and occurtime
+job
+| project diffTime = systemInputTime - occurTime
+| take 100000
+| summarize count() by bin(diffTime, 1m)
+| where diffTime > 0s
+| order by diffTime asc
+| take 1000
+
+//functions
+let SpeedVsTorque=(id:string, sdate:datetime , edate:datetime) {
+    StdBusDataParsed
+    | where occurTime between (sdate..edate)
+    | where serno == ['id']
+    | project serno, occurTime, speed, torque
+};
+SpeedVsTorque("4405447", ago(5d), ago(4d))
+| summarize speed=avg(speed), torque=avg(torque) by bin(occurTime, 1m)
+| render scatterchart 
+
+// Joins
+let JobData = (offset:int) 
+{ 
+  job
+  | where occurTime >= ago(1d*offset)
+  | where jobname == "StdBusData"
+  | project ts = occurTime, serno, mdrTemperature=todouble(job.mdrTemperature)
+  | summarize mdrTemperature=avg(mdrTemperature) by serno, bin(ts, 1m)
+};
+let RawData = (offset:int) 
+{ 
+  signal_raw
+  | where signal_ts  >= ago(1d*offset)
+  | where signal_name == "TEMP_UIF"
+  | project ts = signal_ts, serno, ambientTemperature=double_val
+  | summarize ambientTemperature=avg(ambientTemperature) by serno, bin(ts, 1m)
+};
+let offset=2;
+JobData(offset)
+| join kind=inner
+    (
+        RawData(offset)
+    ) on serno, ts
+| project serno, ts, ambientTemperature, mdrTemperature
