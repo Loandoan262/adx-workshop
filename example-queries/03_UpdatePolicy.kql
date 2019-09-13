@@ -17,14 +17,14 @@ job
 // StdBusData jobs will be parsed and ingested to some target table with explicit schema.
 // there are 19,075,433 jobs like these.
 job 
-| where jobname == "StdBusData"
+| where job_name == "StdBusData"
 | count 
 
 
 
 // this query samples 5 StdBusData jobs
 job
-| where jobname == "StdBusData"
+| where job_name == "StdBusData"
 | sample 5 
 
 
@@ -36,7 +36,7 @@ job
 // this aggregate is used in order to detect the target schema desired for parsing a dynamic object values into columns where each 
 // column represents a property in that json.
 job
-| where jobname == "StdBusData"
+| where job_name == "StdBusData"
 | summarize buildschema(job)
 
 
@@ -55,15 +55,15 @@ job
 
 // this is the KQL_QUERY_PARSES_PROPERTIES
 job
-| where jobname == "StdBusData"
-| project serno, occurTime , systemInputTime , rpm = tolong(job["rpm"]), fuel = tolong(job["fuel"]), latitude = todouble(job["lat"]), longitude = todouble(job["long"]), gps_speed = tolong(job["gpsSpeed"]), torque = tolong(job["torque"])
+| where job_name == "StdBusData"
+| project serno, occur_time , sys_input_time , rpm = tolong(job["rpm"]), fuel = tolong(job["fuel"]), latitude = todouble(job["lat"]), longitude = todouble(job["long"]), gps_speed = tolong(job["gpsSpeed"]), torque = tolong(job["torque"])
 | limit 10
 
 
 // creating the target view named StdBusData_view_<your_alias>
 .set-or-append StdBusData_view_<your_alias> <| job
-| where jobname == "StdBusData"
-| project serno, occurTime , systemInputTime , rpm = tolong(job["rpm"]), fuel = tolong(job["fuel"]), latitude = todouble(job["lat"]), longitude = todouble(job["long"]), gps_speed = tolong(job["gpsSpeed"]), torque = tolong(job["torque"])
+| where job_name == "StdBusData"
+| project serno, occur_time , sys_input_time , rpm = tolong(job["rpm"]), fuel = tolong(job["fuel"]), latitude = todouble(job["lat"]), longitude = todouble(job["long"]), gps_speed = tolong(job["gpsSpeed"]), torque = tolong(job["torque"])
 | limit 0
 
 
@@ -77,8 +77,8 @@ job
 .create-or-alter function ParseStdBusData_<your_alias>()
 {
     job_<your_alias>
-    | where jobname == "StdBusData"
-    | project serno, occurTime , systemInputTime , rpm = tolong(job["rpm"]), fuel = tolong(job["fuel"]), latitude = todouble(job["lat"]), longitude = todouble(job["long"]), gps_speed = tolong(job["gpsSpeed"]), torque = tolong(job["torque"])
+    | where job_name == "StdBusData"
+    | project serno, occur_time , sys_input_time , rpm = tolong(job["rpm"]), fuel = tolong(job["fuel"]), latitude = todouble(job["lat"]), longitude = todouble(job["long"]), gps_speed = tolong(job["gpsSpeed"]), torque = tolong(job["torque"])
 }
 
 
@@ -97,7 +97,7 @@ job
 
 // streaming some data of the job data into job_<your_alias> view (any other ingestion method will result the same into StdBusData_view_<your_alias>)
 .set-or-append job_<your_alias> <| job
-| where jobname == "StdBusData"
+| where job_name == "StdBusData"
 | limit  5 
 
 
@@ -110,15 +110,15 @@ StdBusData_view_<your_alias>
 // let's even try to ingest data which has StdBusData and other jobname and see that only the StdBusData is being processed and parsed.
 // to do this, we can sample 5 records of StdBusData and 5 records of jobname != StdBusData.
 // this is the query which generates the data (make sure it returns 10 records) :
-union (job | where jobname == "StdBusData" | sample 5), (job | where jobname != "StdBusData" | sample 5)
+union (job | where job_name == "StdBusData" | sample 5), (job | where job_name != "StdBusData" | sample 5)
 
 
 
 //stream this data into the job_<your_alias> table:
 .set-or-append job_<your_alias> <| 
 union 
-(job | where jobname == "StdBusData" | sample 5),
-(job | where jobname != "StdBusData" | sample 5)
+(job | where job_name == "StdBusData" | sample 5),
+(job | where job_name != "StdBusData" | sample 5)
 
 
 
