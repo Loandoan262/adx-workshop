@@ -1,11 +1,11 @@
 // Basics
 
 
-// 7.8 Bollion records 
-signal_raw
+// 2.4 Bollion records 
+signals
 | count 
 
-signal_raw
+signals
 | where signal_ts > ago(20d)
 | count
 
@@ -13,39 +13,40 @@ job
 | summarize count() by serno
 | order by count_
 
-signal_raw
-| project job_name, signal_name 
+job
+| project serno, job_name
 | take 10
 
 // dual usage of text an Json 
-signal_raw
-| where signal_ts > ago(20d) 
-| where job_name has 'can'
-| distinct signal_name 
+job
+| where occur_time > ago(20d) 
+| where job_name like 'Bus'
+| distinct job_name 
 
 
-// summerize 
+// summarize 
 // (More) advanced operators
-signal_raw
-| summarize count() by signal_name 
+job
+| summarize count() by job_name 
+| order by count_
 
 // render 
-signal_raw
+signals
 | where serno == "3703033"
+| project serno, signal_ts, MILE_KM
 | where signal_ts  between (datetime(2019-05-03) .. datetime(2019-05-10))
-| where signal_name == "MILE_KM"
-| render timechart 
+| render linechart  
 
 // bin 
-signal_raw
+signals
 | where serno == "3703033"
 | where signal_ts  between (datetime(2019-05-03) .. datetime(2019-05-10))
-| where signal_name == "MILE_KM"
-| summarize avg(int_val) by bin(signal_ts, 1d)
+| project serno, signal_ts, MILE_KM
+| summarize avg(MILE_KM) by bin(signal_ts, 1d)
 | render timechart
 
-signal_raw
-| summarize signalCount=count() by signal_name
+job
+| summarize signalCount=count() by job_name
 | render piechart 
 
 // dynamics columns 
@@ -54,11 +55,11 @@ job
 
 // dual usage of text an Json
 job
-| where occurTime > ago(20d) 
-| where ['stream'] hassuffix "Engine"
-| project progDate=tostring(job.event), ['stream']
+| where occur_time > ago(20d) 
+| where ['filename'] hassuffix "Engine"
+| project progDate=tostring(job.event), ['filename']
 | where isnotempty( progDate)
-| summarize count() by progDate, ['stream']
+| summarize count() by progDate, ['filename']
 
 //at which speed do cars fail with with status?
 job
@@ -67,7 +68,7 @@ job
 
 //difference between systeminput and occurtime
 job
-| project diffTime = systemInputTime - occurTime
+| project diffTime = sys_input_time - occur_time
 | take 100000
 | summarize count() by bin(diffTime, 1m)
 | where diffTime > 0s
@@ -76,30 +77,29 @@ job
 
 //functions
 let SpeedVsTorque=(id:string, sdate:datetime , edate:datetime) {
-    StdBusDataParsed
-    | where occurTime between (sdate..edate)
+    signals
+    | where signal_ts   between (sdate..edate)
     | where serno == ['id']
-    | project serno, occurTime, speed, torque
+    | project serno, signal_ts, V_VEH_COG, AVL_TORQ_CRSH
 };
-SpeedVsTorque("4405447", ago(5d), ago(4d))
-| summarize speed=avg(speed), torque=avg(torque) by bin(occurTime, 1m)
+SpeedVsTorque("4405447", ago(30d), ago(4d))
+| summarize speed=avg(V_VEH_COG), torque=avg(AVL_TORQ_CRSH) by bin(signal_ts, 1m)
 | render scatterchart 
 
 // Joins
 let JobData = (offset:int) 
 { 
   job
-  | where occurTime >= ago(1d*offset)
-  | where jobname == "StdBusData"
-  | project ts = occurTime, serno, mdrTemperature=todouble(job.mdrTemperature)
+  | where occur_time >= ago(1d*offset)
+  | where job_name == "StdBusData"
+  | project ts = occur_time, serno, mdrTemperature=todouble(job.mdrTemperature)
   | summarize mdrTemperature=avg(mdrTemperature) by serno, bin(ts, 1m)
 };
 let RawData = (offset:int) 
 { 
-  signal_raw
+  signals
   | where signal_ts  >= ago(1d*offset)
-  | where signal_name == "TEMP_UIF"
-  | project ts = signal_ts, serno, ambientTemperature=double_val
+  | project ts = signal_ts, serno, ambientTemperature=TEMP_UIF
   | summarize ambientTemperature=avg(ambientTemperature) by serno, bin(ts, 1m)
 };
 let offset=2;
