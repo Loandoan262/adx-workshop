@@ -11,3 +11,21 @@ job
 | summarize speed=avg(speed) by geohash, serno
 | extend geojson=geo_geohash_to_central_point(geohash)
 | top 5 by speed asc;
+
+
+
+job
+| extend geohash=geo_point_to_geohash(todouble(job.['long']), todouble(job.['lat']),9), speed=todouble(job.speed)
+| order by speed desc
+| take 1000000
+| join kind=leftouter  (
+    job
+    | where job_name == "Diag%startDeviceVin"
+    | extend vin = tostring(job.vin)
+) on $left.serno == $right.serno
+| project geohash, serno, speed, vin
+| summarize speed=avg(speed), data=count(vin), mdr=dcount(serno) by geohash, vin
+| extend geojson=geo_geohash_to_central_point(geohash)
+| where geohash !startswith_cs "spex"
+| order by data desc
+| take 5000;
