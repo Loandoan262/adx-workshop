@@ -1,12 +1,16 @@
 // Basics
 
-
-// 2.4 Bollion records 
+// Outdated table
+// 2.4 billion records 
 signals
 | count 
 
 signals
 | where signal_ts > ago(20d)
+| count
+// Outdated table
+
+job
 | count
 
 job
@@ -31,19 +35,21 @@ job
 | order by count_
 
 // render 
-signals
+job
 | where serno == "3703033"
-| project serno, signal_ts, MILE_KM
-| where signal_ts  between (datetime(2019-05-03) .. datetime(2019-05-10))
-| render linechart  
+| project serno, occur_time, speed = todouble(job.gpsSpeed)
+| where isnotnull(speed)
+| where occur_time > ago(30d)
+| render timechart 
 
 // bin 
-signals
+job
 | where serno == "3703033"
-| where signal_ts  between (datetime(2019-05-03) .. datetime(2019-05-10))
-| project serno, signal_ts, MILE_KM
-| summarize avg(MILE_KM) by bin(signal_ts, 1d)
-| render timechart
+| project serno, occur_time, speed = todouble(job.gpsSpeed)
+| where isnotnull(speed)
+| where occur_time > ago(30d)
+| summarize avg(speed) by bin(occur_time, 1min)
+| render timechart 
 
 job
 | summarize signalCount=count() by job_name
