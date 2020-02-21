@@ -18,6 +18,10 @@ job
 | order by count_
 
 job
+| summarize max(occur_time) by job_name
+| order by max_occur_time desc
+
+job
 | project serno, job_name
 | take 10
 
