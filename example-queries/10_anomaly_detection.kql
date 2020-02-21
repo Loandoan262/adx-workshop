@@ -1,0 +1,20 @@
+job
+| where job_name == "lteStatus"
+| take 10
+
+job
+| where job_name == "lteStatus" and serno == "3455609"
+| project serno, occur_time, volume=todouble(job.usedAt)/(1024*1024*1024)
+| render anomalychart  
+
+
+job
+| where job_name == "eaDrivingLog"
+| order by occur_time desc
+| take 100
+
+job
+| where job_name == "eaDrivingLog" and serno == "4404971"
+| project serno, occur_time, val=todouble(job.avgSpeedKmh)
+| where val<350
+| render anomalychart  
