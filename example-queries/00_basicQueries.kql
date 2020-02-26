@@ -119,3 +119,16 @@ JobData(offset)
         RawData(offset)
     ) on serno, ts
 | project serno, ts, ambientTemperature, mdrTemperature
+
+
+//Get an understanding of the schema of the table.
+.show table job schema as json 
+
+.show table job cslschema 
+
+//Dynamic columns are awesome but also might be a bit confusing if schemas change a lot. Here is a way to identify all values in a dynamic column
+event
+| summarize buildschema(event)
+
+job
+| summarize buildschema(job)
