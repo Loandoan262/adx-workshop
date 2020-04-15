@@ -1,0 +1,56 @@
+// Check FSPListe
+event 
+|where vin == "WBA21CF020H019162" 
+|where event_type == "dtc_event" 
+//|where event.ECU_SGBD contains ("TEE")
+|where event.F_ORT_T contains ("SecOC") 
+//|where event.FEHLERORT_HEX == "0x021493" 
+|project ECU_SGBD=tostring(event.ECU_SGBD), FO_HEX=tostring(event.FEHLERORT_HEX),FO_TXT=tostring(event.F_ORT_T), vin, occur_time, serno 
+|summarize (FSPletztesAuslesen, FO_TXT, ECU_SGBD)=arg_max(occur_time,FO_TXT, ECU_SGBD) by FO_HEX, vin, serno
+
+// Use bag_unpack and mv-expand to extract information
+event 
+| where event_type == "csvk_event" 
+| project event, vin, serno, occur_time
+| evaluate bag_unpack(event)
+| mv-expand XWES
+//| evaluate bag_unpack(XWES)
+| take 10
+
+
+// Create a function to extract master data
+.create-or-alter function 
+with (docstring = 'Master Data Extraction', folder='chkreibi')
+master_data(id: int, gran: timespan)  {car_eseries_istufe | where serno == id| where isnotempty(isHo) and isnotempty(eseries) and isnotempty(isWerk) | extend join_ts = bin(occur_time, gran)}
+
+master_data('4405598', 1m)
+
+
+
+// Combine those two
+let id = toscalar(event 
+| where vin == "WBA21CF020H019162"
+| distinct serno);
+let FSPListe = materialize(event 
+| where vin == "WBA21CF020H019162" 
+| where event_type == "dtc_event" 
+//|where event.ECU_SGBD contains ("TEE")
+|where event.F_ORT_T contains ("SecOC") 
+//|where event.FEHLERORT_HEX == "0x021493" 
+| project ECU_SGBD=tostring(event.ECU_SGBD), FO_HEX=tostring(event.FEHLERORT_HEX),FO_TXT=tostring(event.F_ORT_T), vin, occur_time, serno 
+| summarize (FSPletztesAuslesen, FO_TXT, ECU_SGBD)=arg_max(occur_time,FO_TXT, ECU_SGBD) by FO_HEX, vin, serno);
+FSPListe | join (event 
+| where event_type == "csvk_event" 
+| project event, vin, serno, occur_time
+| evaluate bag_unpack(event)
+)
+on $left.ECU_SGBD == $right.ECU_SGBD, serno 
+| project-away vin1, serno1
+| where occur_time < FSPletztesAuslesen 
+| summarize (SVK_Lesedatum, XWES)=arg_max(occur_time, XWES) by FO_HEX, FO_TXT, ECU_SGBD, vin, serno, FSPletztesAuslesen
+| mv-expand XWES
+| evaluate bag_unpack(XWES)
+| extend join_ts = bin(SVK_Lesedatum, 1s)
+| join kind = leftouter (master_data(id, 1s)) on ($left.serno == $right.serno) //and ($left.join_ts == $right.join_ts)
+
+// Looks pretty good
