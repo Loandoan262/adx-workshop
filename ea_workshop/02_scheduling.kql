@@ -30,3 +30,36 @@ kat_diagnose
 // There are basically two ways of triggering Kusto Queries from external.
 // Logic Apps and Azure Data Factory
 
+
+//Short excurs on anomaly detection.
+let interval = 120min;
+let stime = datetime(2020-03-15);
+let etime = datetime(2020-03-31);
+kat_diagnose
+| make-series r=avg(RATIO) on d from stime to etime step interval by vin
+| extend ff = series_fill_forward(r, 0)
+| project-away r
+| render anomalychart  
+
+//If we don't want to have that viually but rather detect the anomalies in the tables we can do that aswell.
+let interval = 120min;
+let stime = datetime(2020-03-15);
+let etime = datetime(2020-03-31);
+let sensitivity=5;
+kat_diagnose
+| make-series r=avg(RATIO) on d from stime to etime step interval by vin
+| extend ff = series_fill_forward(r, 0)
+| extend (ad, score, baseline) = series_decompose_anomalies(ff, sensitivity)
+
+//With this data you can render great plots but you can also bring it back to non-dynamic data types
+let interval = 120min;
+let stime = datetime(2020-03-15);
+let etime = datetime(2020-03-31);
+let sensitivity=5;
+kat_diagnose
+| make-series r=avg(RATIO) on d from stime to etime step interval by vin
+| extend ff = series_fill_forward(r, 0)
+| extend (ad, score, baseline) = series_decompose_anomalies(ff, sensitivity)
+| mv-expand r, d, ff, ad, score, baseline
+//| where ad != 0
+| take 10000
