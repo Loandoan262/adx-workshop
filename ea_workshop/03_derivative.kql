@@ -1,21 +1,3 @@
-Benötigte Informationen:
-Mdr_signals	PWF Zustand „Fahren“: | where signal.ST_CON_VEH == 10
-	Umgebungstemperatur  signal.TEMP_EX oder in ungefiltert signal.TEMP_EX_UNFILT, 			Ungültigkeitswert jeweils FFh, muss ausgeklammert werden 
-	GPS	Longitudinal: 	signal.ST_LONG_NAVI
-		Latitude: 	signal.ST_LAT_NAVI
-	
-
-Todo: Skripterstellung und Visualisierung
-Filtere auf z.B. 10 Fahrzeuge und die letzten 10 Tage um Rechenzeit zu sparen.
-Bilde die erste Ableitung der Umgebungstemperatur. Benötigt werden nur die Werte aus dem PWF Zustand „Fahren“. Hierdurch werden unplausible Werte, die aus der SG Initialisierung stammen ausgeklammert. Achte auf Fahrtwechsel.
-Visualisiere in einer Landkarte.
-
-Anmerkung: Der Umgebungsdruck zeigt ein ähnliches Verhalten und kann auch verwendet werden. Für einige Usecases ist auch die Kombination aus Umgebungsdruck und Umgebungstemperatur hoch interessant
-(Signal nicht in allen Fahrzeugen aufgezeichnet: signal.AIP_ENG_DRV oder alternativ redundantes Signal 
-gemultiplexte PDU noch nicht in interpretiert in Kusto verfügbar: OBD_SEN_DIAGST: 
-Wenn ID_OBD_SEN=6hex  RWDT_OBD_SEN_2, Wertebereich: 598...1108 hPa Umrechnung: (PH) = 0,5 * (HEX) +598 [hPa])
-
-
 signals
 | take 10
 
