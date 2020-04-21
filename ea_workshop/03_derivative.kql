@@ -17,11 +17,12 @@ signals
 | render timechart
 
 //Now do a table again
+.set-or-replace async map_derivative <| 
 let id = dynamic([4405594, 4196428]);
 let interval = 1s;
 let stime = datetime(2020-04-13);
 let etime = datetime(2020-04-14);
-signals
+database('mdr-signals').signals
 | where serno in (id)
 | where signal.ST_CON_VEH == 10
 | project serno, signal_ts, temp=todouble(signal.TEMP_EX), temp_unf = todouble(signal.TEMP_EX_UNFILT), lon = todouble(signal.ST_LONG_NAVI), lat = todouble(signal.ST_LAT_NAVI)
@@ -30,8 +31,8 @@ signals
 | extend derivative=series_fir(temp, dynamic([1,-1]))
 //| project-away avg_temp
 | mv-expand signal_ts, temp, derivative, lon, lat
-| where lon != 0 and lat != 0
-| take 10000
+| project serno, todatetime(signal_ts), todouble(temp), todouble(derivative), todouble(lon), todouble(lat)
+| where lon != 0 and lat != 0 and derivative != 0
 
 | join kind = inner hint.strategy=shuffle (
 signals 
