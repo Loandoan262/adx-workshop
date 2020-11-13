@@ -1,5 +1,5 @@
 job
-| extend geohash=geo_point_to_geohash(todouble(job.['long']), todouble(job.lat),6), speed=todouble(job.speed)
+| extend geohash=geo_point_to_geohash(todouble(job.['long']), todouble(job.lat),5), speed=todouble(job.speed)
 | order by speed desc
 | take 10000
 | join kind=leftouter (
@@ -10,7 +10,7 @@ job
 | project geohash, serno, speed, vin
 | summarize speed=avg(speed) by geohash, serno
 | extend geojson=geo_geohash_to_central_point(geohash)
-| top 5 by speed asc;
+| top 50 by speed asc;
 
 
 
