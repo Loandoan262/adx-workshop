@@ -87,13 +87,13 @@ job
 
 //functions
 let SpeedVsTorque=(id:string, sdate:datetime , edate:datetime) {
-    signals
-    | where signal_ts   between (sdate..edate)
+    job
+    | where occur_time  between (sdate..edate)
     | where serno == ['id']
-    | project serno, signal_ts, V_VEH_COG, AVL_TORQ_CRSH
+    | project serno, occur_time, speed = todouble(job.speed), torque = todouble(job.torque)
 };
 SpeedVsTorque("4405447", ago(30d), ago(4d))
-| summarize speed=avg(V_VEH_COG), torque=avg(AVL_TORQ_CRSH) by bin(signal_ts, 1m)
+| summarize speed=avg(speed), torque=avg(torque) by bin(occur_time, 1m)
 | render scatterchart 
 
 // Joins
